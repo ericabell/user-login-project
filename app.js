@@ -33,6 +33,10 @@ app.use(session({
   saveUninitialized: true
 }));
 
+app.engine('mustache', mustacheExpress());
+app.set('view engine', 'mustache');
+app.set('views', __dirname + '/views');
+
 
 app.get('/', (req, res, next) => {
   // try to get the data from req.session
@@ -43,17 +47,17 @@ app.get('/', (req, res, next) => {
     console.log('We have never seen this user before.');
     // create some data for the session associated with this user (cookie)
     user = req.session.user = {username: '', password: '', loggedin: false};
-    res.send('never seen you before');
+    res.redirect('/login');
   } else {
     // we have seen this person before, but are they logged in?
     console.log('We have seen this user before, need to check their status');
-    res.send('JSON.stringify(user)')
+    res.render('index', {data: JSON.stringify(user)});
   }
 
 });
 
 app.get('/login', (req, res, next) => {
-  res.send('this is the login page.')
+  res.render('login')
 })
 
 app.listen(3000, () => {
