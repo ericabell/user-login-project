@@ -55,7 +55,7 @@ app.get('/', (req, res, next) => {
     console.log('We have seen this user before, need to check their status');
     if( req.session.user.loggedin ) {
       // user is logged in, we are good.
-      res.render('index', {data: JSON.stringify(req.session.user)});
+      res.render('index', {data: req.session.user});
     } else {
       // need to autheticate, send them to /login
       res.redirect('/login');
@@ -76,10 +76,22 @@ app.get('/login', (req, res, next) => {
 
 app.post('/login', (req, res, next) => {
   // this is where we will auth a user based on what they entered in the form
-  let username = req.body.username;
-  let password = req.body.password;
 
-  console.log('authenticate user: ' + username + ' ' + password);
+  // they better have req.session.user
+  if( !req.session.user ) {
+    // error, we've never seen this person before
+    res.send('req.session.user should have existed, but was not')
+  } else {
+    // grab the info that they entered
+    let username = req.body.username;
+    let password = req.body.password;
+    console.log('authenticate user: ' + username + ' ' + password);
+
+    // check their info against req.user
+
+  }
+
+
 
   // TODO need to check credentials
   if( username != req.body.username || password != req.body.password ) {
