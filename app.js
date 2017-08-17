@@ -3,10 +3,12 @@ const session = require('express-session');
 const mongoDBStore = require('connect-mongodb-session')(session);
 const mustacheExpress = require('mustache-express');
 const morgan = require('morgan');
+const bodyParser = require('body-parser');
 
 let app = express();
 
 app.use(morgan('combined'));
+app.use(bodyParser.urlencoded({ extended: false }));
 
 let store = new mongoDBStore(
   {
@@ -60,12 +62,17 @@ app.get('/', (req, res, next) => {
 
 });
 
+app.post('/', (req, res, next) => {
+  // this is where a user has typed some credentials and we need to check them
+  res.send('need to check credentials' + req.body.username + req.body.password)
+
+})
+
 app.get('/login', (req, res, next) => {
   res.render('login')
 });
 
 app.post('/login', (req, res, next) => {
-  res.send('post to login attempted')
 })
 
 app.listen(3000, () => {
