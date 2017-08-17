@@ -2,8 +2,12 @@ const express = require('express');
 const session = require('express-session');
 const mongoDBStore = require('connect-mongodb-session')(session);
 const mustacheExpress = require('mustache-express');
+const morgan = require('morgan');
 
 let app = express();
+
+app.use(morgan('combined'));
+
 let store = new mongoDBStore(
   {
     uri: 'mongodb://localhost:27017/user-login-project',
@@ -58,6 +62,10 @@ app.get('/', (req, res, next) => {
 
 app.get('/login', (req, res, next) => {
   res.render('login')
+});
+
+app.post('/login', (req, res, next) => {
+  res.send('post to login attempted')
 })
 
 app.listen(3000, () => {
