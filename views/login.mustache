@@ -5,19 +5,21 @@
     <title>Login Page</title>
   </head>
   <body>
-      We are going to prompt you to login or create a new account.
+      <p>We are going to prompt you to login or create a new account.</p>
+
+      <p>{{error}}</p>
 
       <h1>Create a new account: post to /newaccount</h1>
       <form class="create-account" action="/newaccount" method="post">
         <label for="username">Username</label>
         <input type="text" name="username" value="">
         <label for="password">Password</label>
-        <input type="text" name="password" value="">
+        <input type="password" name="password" value="">
         <input type="submit" name="submit" value="Signup">
       </form>
 
       <h1>Login with credentials: post to /login</h1>
-      <form class="login-account" action="/" method="post">
+      <form class="login-account" action="/login" method="post">
         <label for="username">Username</label>
         <input type="text" name="username" value="">
         <label for="password">Password</label>
