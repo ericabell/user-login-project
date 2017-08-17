@@ -45,19 +45,21 @@ app.set('views', __dirname + '/views');
 
 
 app.get('/', (req, res, next) => {
-  // try to get the data from req.session
-  let user = req.session.user;
-
   // if it doesn't exist, assume we have never seen this user before
-  if (!user) {
+  if (!req.session.user) {
     console.log('We have never seen this user before.');
     // create some data for the session associated with this user (cookie)
-    user = req.session.user = {username: '', password: '', loggedin: false};
     res.redirect('/login');
   } else {
     // we have seen this person before, but are they logged in?
     console.log('We have seen this user before, need to check their status');
-    res.render('index', {data: JSON.stringify(user)});
+    if( req.session.user.loggedin ) {
+      // user is logged in, we are good.
+      res.render('index', {data: JSON.stringify(req.session.user)});
+    } else {
+      // need to autheticate, send them to /login
+      res.redirect('/login');
+    }
   }
 
 });
@@ -73,6 +75,32 @@ app.get('/login', (req, res, next) => {
 });
 
 app.post('/login', (req, res, next) => {
+  // this is where we will auth a user based on what they entered in the form
+  let username = req.body.username;
+  let password = req.body.password;
+
+  console.log('authenticate user: ' + username + ' ' + password);
+
+  // TODO need to check credentials
+  if( username != req.body.username || password != req.body.password ) {
+    // auth failed
+  } else {
+    // auth success! redirect to / as authenticated user
+    res.redirect('/');
+  }
+})
+
+app.post('/newaccount', (req, res, next) => {
+  // grab what they entered and set re.session
+  // redirect to / as auth user
+  console.log('Create new user: ' + req.body.username + ' ' + req.body.password);
+  // we will need to create req.session.user
+  req.session.user = {};
+  req.session.user.username = req.body.username;
+  req.session.user.password = req.body.password;
+  req.session.user.loggedin = true;
+
+  res.redirect('/');
 })
 
 app.listen(3000, () => {
