@@ -56,17 +56,26 @@ app.set('views', __dirname + '/views');
 
 // GENERAL CATCH FOR ALL ROUTES TO CHECK LOGIN STATUS
 app.use( (req, res, next) => {
+  console.log('*********************************************************');
   console.log('=> ALL ROUTES check session store');
+  console.log(`${req.path}`);
+  // if we posted to /newaccount there will not be a session,
+  // and so we want to call next() so that the login page is not rendered
+  if( req.path === '/newaccount' || req.path === '/login' ) {
+    next();
+  }
   if( req.session.user ) { console.log(JSON.stringify(req.session.user)); }
   else { console.log('=> no session data available');}
 
   if( req.session.user && req.session.user.loggedin ) {
     // whatever route the user has requested, they have logged in and are
     // good to go, so we can call next() and find the route they requested
+    console.log('=> confirmed session data exists and loggedin as true');
     next();
   } else {
     // user either needs to sign in with credentials or sign up for account
-    res.render('login');
+    console.log('=> user is not logged in, render login');
+    res.render('login', {error: false});
   }
 })
 
@@ -100,22 +109,42 @@ app.post('/login', (req, res, next) => {
   // all we have is the database to authenticate against....
   // this query works:
   // db.user.find({"session.user.username":"water"})
+  console.log('=> beginning auth verification');
+  console.log(`=> BEFORE MongoClient, the value of headersSent: ${res.headersSent}`);
+
   MongoClient.connect(url, function(err, db) {
+    console.log(`=> FIRST LINE OF MONGO CLIENT, the value of headersSent: ${res.headersSent}`);
+// db will be initialized db object or null if error occured
     assert.equal(null, err);
     console.log('=> Connected to MongoDB server.');
     console.log('=> User posted login information, querying the db.');
     console.log(`=> Looking for ${req.body.username} with pass: ${req.body.password}`);
-    db.user.find({"session.user.username":req.body.username}).toArray( (err, docs) => {
+
+    db.collection('user').find({"session.user.username":req.body.username}).toArray( (err, docs) => {
       if(err) {console.log('=> DB ERROR: ' + err);}
       else {
         console.log('  => Retrieved records from db:');
         console.log(docs);
-        db.close();
+        // check for the username/password combo
+        if( docs[0] && (docs[0].session.user.password === req.body.password) ) {
+          // password matched
+          console.log('=> passwords matched');
+          req.session.user = {};
+          req.session.user.username = req.body.username;
+          req.session.user.password = req.body.password;
+          req.session.user.loggedin = true;
+          db.close();
+          // res.send('password matched! log in successful.');
+          // res.redirect('/');
+        } else {
+          console.log('=> passwords did not match');
+          db.close();
+          // passwords didn't match
+          // res.send('password did not match');
+        }
       }
     })
-
   });
-  res.send('need to find the user in the database. no cookie, no session')
 })
 
 app.post('/newaccount', (req, res, next) => {
@@ -128,7 +157,8 @@ app.post('/newaccount', (req, res, next) => {
   req.session.user.password = req.body.password;
   req.session.user.loggedin = true;
 
-  res.redirect('/');
+  // res.render('index', {data: req.session.user});
+  res.send('new account created successfully');
 })
 
 app.listen(3000, () => {
