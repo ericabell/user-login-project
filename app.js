@@ -62,7 +62,7 @@ app.use( (req, res, next) => {
   // if we posted to /newaccount there will not be a session,
   // and so we want to call next() so that the login page is not rendered
   if( req.path === '/newaccount' || req.path === '/login' ) {
-    next();
+    return next();
   }
   if( req.session.user ) { console.log(JSON.stringify(req.session.user)); }
   else { console.log('=> no session data available');}
@@ -135,7 +135,7 @@ app.post('/login', (req, res, next) => {
           req.session.user.loggedin = true;
           db.close();
           // res.send('password matched! log in successful.');
-          // res.redirect('/');
+          res.redirect('/');
         } else {
           console.log('=> passwords did not match');
           db.close();
