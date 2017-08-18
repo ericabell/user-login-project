@@ -1,15 +1,28 @@
 const express = require('express');
 const session = require('express-session');
 const mongoDBStore = require('connect-mongodb-session')(session);
+const MongoClient = require('mongodb').MongoClient;
+const assert = require('assert');
 const mustacheExpress = require('mustache-express');
 const morgan = require('morgan');
 const bodyParser = require('body-parser');
 
+// connect to our mongodb and test the connection
+let url = 'mongodb://localhost:27017/user-login-project';
+MongoClient.connect(url, function(err, db) {
+  assert.equal(null, err);
+  console.log('=> Connected to MongoDB server.');
+  db.close();
+});
+
+// create our Express app
 let app = express();
 
-app.use(morgan('combined'));
+// set up our logging using morgan
+app.use(morgan('tiny'));
 app.use(bodyParser.urlencoded({ extended: false }));
 
+// set up the express-session store to use MongoDB
 let store = new mongoDBStore(
   {
     uri: 'mongodb://localhost:27017/user-login-project',
@@ -22,13 +35,7 @@ store.on('error', (e) => {
   assert.ok(false);
 });
 
-
-// session data structure:
-// collection name is user and will hold three things
-// 1. loggedin: true or false
-// 2. username: this user's username
-// 3. password: this user's password
-
+// set up express-session
 app.use(session({
   secret: 'keyboard cat',
   cookie: {
@@ -39,61 +46,75 @@ app.use(session({
   saveUninitialized: true
 }));
 
+// set up our template engine - mustache
 app.engine('mustache', mustacheExpress());
 app.set('view engine', 'mustache');
 app.set('views', __dirname + '/views');
 
-// GENERAL CATCH FOR ALL ROUTES TO CHECK LOGIN STATUS
 
+// --------  BEGIN ROUTES  -----------
+
+// GENERAL CATCH FOR ALL ROUTES TO CHECK LOGIN STATUS
 app.use( (req, res, next) => {
-  console.log('catch all');
-  console.log(JSON.stringify(req.session.user));
+  console.log('=> ALL ROUTES check session store');
+  if( req.session.user ) { console.log(JSON.stringify(req.session.user)); }
+  else { console.log('=> no session data available');}
+
   if( req.session.user && req.session.user.loggedin ) {
-    res.render('index', {data: req.session.user})
-  } else {
-    // user needs to login
+    // whatever route the user has requested, they have logged in and are
+    // good to go, so we can call next() and find the route they requested
     next();
+  } else {
+    // user either needs to sign in with credentials or sign up for account
+    res.render('login');
   }
 })
 
-app.get('/login', (req, res, next) => {
-  res.render('login')
-});
+// ROUTES BELOW ASSUME USER HAS EITHER AUTHENTICATED OR WAS PRESENTED WITH LOGIN
 
 app.get('/', (req, res, next) => {
   // if it doesn't exist, assume we have never seen this user before
   if (!req.session.user) {
-    console.log('We have never seen this user before.');
-    // create some data for the session associated with this user (cookie)
-    res.redirect('/login');
+    console.log('=> req.session.user not available?');
+    next('ERROR: user requested root, but req.session.user was not available');
   } else {
-    // we have seen this person before, but are they logged in?
-    console.log('We have seen this user before, need to check their status');
-    if( req.session.user.loggedin ) {
-      // user is logged in, we are good.
-      res.render('index', {data: req.session.user});
-    } else {
-      // need to autheticate, send them to /login
-      res.redirect('/login');
-    }
+    // render the main page and pass the data to display
+    res.render('index', {data: req.session.user});
   }
-
 });
 
-app.post('/', (req, res, next) => {
-  // this is where a user has typed some credentials and we need to check them
-  res.render('index', {data: req.session.user});
-
-})
-
-
+app.get('/login', (req, res, next) => {
+  // check to see if they have session data
+  if( req.session.user && req.session.user.loggedin ) {
+    // user is already logged in, so they probably should be on /
+    res.redirect('/');
+  } else {
+    res.render('login');
+  }
+});
 
 app.post('/login', (req, res, next) => {
   // this is where we will auth a user based on what they entered in the form
 
   // user has no cookie => no session is available
   // all we have is the database to authenticate against....
+  // this query works:
+  // db.user.find({"session.user.username":"water"})
+  MongoClient.connect(url, function(err, db) {
+    assert.equal(null, err);
+    console.log('=> Connected to MongoDB server.');
+    console.log('=> User posted login information, querying the db.');
+    console.log(`=> Looking for ${req.body.username} with pass: ${req.body.password}`);
+    db.user.find({"session.user.username":req.body.username}).toArray( (err, docs) => {
+      if(err) {console.log('=> DB ERROR: ' + err);}
+      else {
+        console.log('  => Retrieved records from db:');
+        console.log(docs);
+        db.close();
+      }
+    })
 
+  });
   res.send('need to find the user in the database. no cookie, no session')
 })
 
@@ -111,5 +132,5 @@ app.post('/newaccount', (req, res, next) => {
 })
 
 app.listen(3000, () => {
-  console.log('listening on 3000.');
+  console.log('=> listening on 3000.');
 })
