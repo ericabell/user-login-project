@@ -54,16 +54,23 @@ app.set('views', __dirname + '/views');
 
 // --------  BEGIN ROUTES  -----------
 
+let pathsThatDoNotRequireAuthentication = [
+  '/newaccount',
+  '/login'
+];
+
 // GENERAL CATCH FOR ALL ROUTES TO CHECK LOGIN STATUS
 app.use( (req, res, next) => {
   console.log('*********************************************************');
   console.log('=> ALL ROUTES check session store');
   console.log(`${req.path}`);
-  // if we posted to /newaccount there will not be a session,
-  // and so we want to call next() so that the login page is not rendered
-  if( req.path === '/newaccount' || req.path === '/login' ) {
+
+  // some paths do not require auth, detect that here and pass on...
+  if( pathsThatDoNotRequireAuthentication.indexOf(req.path) >= 0 ) {
     return next();
   }
+
+  // check to see if this user is recognized and logged in
   if( req.session.user ) { console.log(JSON.stringify(req.session.user)); }
   else { console.log('=> no session data available');}
 
@@ -140,7 +147,7 @@ app.post('/login', (req, res, next) => {
           console.log('=> passwords did not match');
           db.close();
           // passwords didn't match
-          // res.send('password did not match');
+          res.render('login', {error: 'passwords did not match'});
         }
       }
     })
